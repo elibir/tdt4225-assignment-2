@@ -55,7 +55,7 @@ down: remove-env ## Tear down Docker containers
 # Run init using main.py
 init_db: create-env ## Run the init script
 	@echo "Running init..."
-	$(PYTHON) assignment2_2024/example.py
+	$(PYTHON) example.py
 	@echo "Init completed."
 
 # Start all services
