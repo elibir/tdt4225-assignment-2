@@ -48,14 +48,14 @@ pip_install: create-env ## Install project requirements
 	$(PIP) install -r requirements.txt
 
 # Tear down the Docker containers
-down: remove-env ## Tear down Docker containers
+down: # remove_env ## Tear down Docker containers
 	@echo "Tearing down the Docker containers..."
 	docker-compose down
 
 # Run init using main.py
 init_db: create-env ## Run the init script
 	@echo "Running init..."
-	$(PYTHON) example.py
+	$(PYTHON) DBCreator.py
 	@echo "Init completed."
 
 # Start all services
