@@ -65,11 +65,53 @@ class DbCreator:
             except mysql.connector.Error as err:
                 print(f"Error inserting user {user_id}: {err.msg}")
 
-        # Commit the changes
         self.connection.commit()
         print("User data inserted successfully.")
         
-                        
+    def insert_activity(self, user_id, transportation_mode, start_date_time, end_date_time):
+        query = "INSERT INTO 'Activity' (user_id, transportation_mode, start_date_time, end_date_time) VALUES (%s, %s, %s, %s)"
+        self.cursor.execute(query, (user_id, transportation_mode, start_date_time, end_date_time))
+        self.connection.commit()
+        
+    def insert_trackpoint(self, activity_id, lat, lon, altitude, date_days, date_time):
+        query = "INSERT INTO 'TrackPoint' (activity_id, lat, lon, altitude, date_days, date_time) VALUES (%s, %s, %s, %s, %s, %s)"
+        self.cursor.execute(query, (activity_id, lat, lon, altitude, date_days, date_time))
+        self.connection.commit()
+    
+    def insert_activities(self, activities):
+        query = "INSERT INTO 'Activity' (user_id, transportation_mode, start_date_time, end_date_time) VALUES (%s, %s, %s, %s)"
+        self.cursor.executemany(query, activities)
+        self.connection.commit()
+        
+    def insert_trackpoints(self, trackpoints):
+        query = "INSERT INTO 'TrackPoint' (activity_id, lat, lon, altitude, date_days, date_time) VALUES (%s, %s, %s, %s, %s, %s)"            
+        self.cursor.executemany(query, trackpoints)
+        self.connection.commit()
+        
+    def filter_and_insert_activities(self):
+        self.cursor.execute("SELECT * FROM 'User'")
+        user_tuples = self.cursor.fetchall()
+        for user_id, has_label in user_tuples:
+            activity_files = os.listdir(self.base_path + "Data/" + user_id + "/Trajectory")
+            if len(activity_files) == 0: raise FileNotFoundError("No activity files found for user", user_id)
+            for plt_file in activity_files:
+                activity_data = self.read_plt(self.base_path + "Data/" + user_id + "/Trajectory" + plt_file)
+                if activity_data == None: continue
+                # start_date_time = 
+                # TODO: extract the start and end date time from activity data and put it on right format
+                # for insertion into Activity table
+                
+    def read_plt(file_path):
+        with open(file_path, 'r') as file:
+                lines = file.readlines()
+        if len(lines) > 2500 - 6: return None
+        data = []
+        for line in lines:
+            data.append(line.strip().split(','))
+        return data[6:]        
+                
+            
+        
 def main():
     program = None
     try:

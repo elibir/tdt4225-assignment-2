@@ -1,3 +1,0 @@
-For interacting with the database in the terminal
-
-docker exec -it mysqldb mysql -u root -p
