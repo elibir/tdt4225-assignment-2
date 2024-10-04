@@ -13,6 +13,8 @@ When testing:
 
 start:
 make db
+start venv manually
+run code
 
 finished:
 make down

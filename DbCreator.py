@@ -4,6 +4,7 @@ import mysql.connector
 from mysql.connector import errorcode
 from tables import TABLES
 import os
+from datetime import datetime
 
 
 class DbCreator:
@@ -52,6 +53,16 @@ class DbCreator:
         query = "DROP TABLE %s"
         self.cursor.execute(query % table_name)    
         
+    def empty_table(self, table_name):
+        query = f"DELETE FROM `{table_name}`"
+        try:
+            self.cursor.execute(query)
+            self.connection.commit()
+            print(f"Table `{table_name}` has been emptied.")
+        except Exception as e:
+            print(f"An error occurred while emptying the table `{table_name}`: {e}")
+
+        
     def insert_userdata(self):
         user_ids = os.listdir(self.base_path + "Data")
         with open(self.base_path + "labeled_ids.txt", 'r') as f:
@@ -69,47 +80,57 @@ class DbCreator:
         print("User data inserted successfully.")
         
     def insert_activity(self, user_id, transportation_mode, start_date_time, end_date_time):
-        query = "INSERT INTO 'Activity' (user_id, transportation_mode, start_date_time, end_date_time) VALUES (%s, %s, %s, %s)"
+        query = "INSERT INTO Activity (user_id, transportation_mode, start_date_time, end_date_time) VALUES (%s, %s, %s, %s)"
         self.cursor.execute(query, (user_id, transportation_mode, start_date_time, end_date_time))
-        self.connection.commit()
-        
+
     def insert_trackpoint(self, activity_id, lat, lon, altitude, date_days, date_time):
-        query = "INSERT INTO 'TrackPoint' (activity_id, lat, lon, altitude, date_days, date_time) VALUES (%s, %s, %s, %s, %s, %s)"
+        query = "INSERT INTO TrackPoint (activity_id, lat, lon, altitude, date_days, date_time) VALUES (%s, %s, %s, %s, %s, %s)"
         self.cursor.execute(query, (activity_id, lat, lon, altitude, date_days, date_time))
-        self.connection.commit()
-    
+   
     def insert_activities(self, activities):
-        query = "INSERT INTO 'Activity' (user_id, transportation_mode, start_date_time, end_date_time) VALUES (%s, %s, %s, %s)"
+        query = "INSERT INTO Activity (user_id, transportation_mode, start_date_time, end_date_time) VALUES (%s, %s, %s, %s)"
         self.cursor.executemany(query, activities)
         self.connection.commit()
         
     def insert_trackpoints(self, trackpoints):
-        query = "INSERT INTO 'TrackPoint' (activity_id, lat, lon, altitude, date_days, date_time) VALUES (%s, %s, %s, %s, %s, %s)"            
+        query = "INSERT INTO TrackPoint (activity_id, lat, lon, altitude, date_days, date_time) VALUES (%s, %s, %s, %s, %s, %s)"            
         self.cursor.executemany(query, trackpoints)
         self.connection.commit()
         
     def filter_and_insert_activities(self):
-        self.cursor.execute("SELECT * FROM 'User'")
+        self.cursor.execute("SELECT * FROM User")
         user_tuples = self.cursor.fetchall()
         for user_id, has_label in user_tuples:
             activity_files = os.listdir(self.base_path + "Data/" + user_id + "/Trajectory")
             if len(activity_files) == 0: raise FileNotFoundError("No activity files found for user", user_id)
             for plt_file in activity_files:
-                activity_data = self.read_plt(self.base_path + "Data/" + user_id + "/Trajectory" + plt_file)
+                activity_data = self.read_plt(self.base_path + "Data/" + user_id + "/Trajectory/" + plt_file)
                 if activity_data == None: continue
-                # start_date_time = 
-                # TODO: extract the start and end date time from activity data and put it on right format
-                # for insertion into Activity table
+                start_date_time = datetime.strptime(activity_data[0][5] + " " + activity_data[0][6], "%Y-%m-%d %H:%M:%S") 
+                end_date_time = datetime.strptime(activity_data[-1][5] + " " + activity_data[-1][6], "%Y-%m-%d %H:%M:%S")
+                self.insert_activity(user_id, None, start_date_time, end_date_time)
+            print("Finished inserting activities for user: ", user_id)
+                # TODO: fix insertion of trackpoints
+                # maybe smart to make a label table? and join it later
+        self.connection.commit()
                 
-    def read_plt(file_path):
+    def read_plt(self, file_path):
         with open(file_path, 'r') as file:
                 lines = file.readlines()
         if len(lines) > 2500 - 6: return None
         data = []
-        for line in lines:
+        for line in lines[6:]:
             data.append(line.strip().split(','))
-        return data[6:]        
-                
+        return data
+    
+    def read_labels(self, file_path):
+        with open(file_path, 'r') as file:
+                        lines = file.readlines()
+        data = []
+        for line in lines[1:]:
+            data.append(line.strip().split(''))
+        # TODO: finish this function!              
+            
             
         
 def main():
@@ -134,7 +155,9 @@ if __name__ == '__main__':
     program = DbCreator()
     program.create_tables()
     program.insert_userdata()
-    program.fetch_data(table_name="User")
+    program.empty_table("Activity")
+    program.filter_and_insert_activities()
+    program.fetch_data(table_name="Activity")
     program.drop_table("TrackPoint")
     program.drop_table("Activity")
     program.drop_table("User")
