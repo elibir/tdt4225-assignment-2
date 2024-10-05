@@ -16,9 +16,9 @@ class DbConnector:
 
     def __init__(self,
                  HOST='localhost',
-                 DATABASE='strava_db',
+                 DATABASE='geolife',
                  USER='root',
-                 PASSWORD='root'):
+                 PASSWORD='123'):
         # Connect to the database
         try:
             self.db_connection = mysql.connect(host=HOST, database=DATABASE, user=USER, password=PASSWORD, port=3306)
