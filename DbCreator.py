@@ -15,22 +15,6 @@ class DbCreator:
         self.connection = self.db_connector.db_connection
         self.cursor = self.db_connector.cursor
         self.base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dataset/')  # Ensures that os methods has this file's location as its root
-     
-    def create_tables(self):   
-        for table_name in TABLES:
-            table_description = TABLES[table_name]
-            try:
-                print("Creating table {}: ".format(table_name), end='')
-                self.cursor.execute(table_description)
-            except mysql.connector.Error as err:
-                if err.errno == errorcode.ER_TABLE_EXISTS_ERROR:
-                    print("already exists.")
-                else:
-                    print(err.msg)
-            else:
-                print("OK")
-                
-        self.connection.commit()
         
     def show_tables(self):
         self.cursor.execute("SHOW TABLES")
@@ -53,7 +37,23 @@ class DbCreator:
         print("Dropping table %s..." % table_name)
         query = "DROP TABLE %s"
         self.cursor.execute(query % table_name)    
-        
+     
+    def create_tables(self):   
+        for table_name in TABLES:
+            table_description = TABLES[table_name]
+            try:
+                print("Creating table {}: ".format(table_name), end='')
+                self.cursor.execute(table_description)
+            except mysql.connector.Error as err:
+                if err.errno == errorcode.ER_TABLE_EXISTS_ERROR:
+                    print("already exists.")
+                else:
+                    print(err.msg)
+            else:
+                print("OK")
+                
+        self.connection.commit()
+
     def empty_table(self, table_name):
         query = f"DELETE FROM `{table_name}`"
         try:
@@ -84,24 +84,6 @@ class DbCreator:
         self.cursor.execute(query, (user_id, transportation_mode, start_date_time, end_date_time))
         return self.cursor.lastrowid
         
-    # def insert_trackpoints(self, activity_id, trackpoints):
-    #     formatted_trackpoints = []
-    #     for trackpoint in trackpoints:
-    #         latitude = trackpoint[0]
-    #         longitude = trackpoint[1]
-    #         altitude = trackpoint[3]
-    #         date_days = trackpoint[4]
-    #         # Merge date and hour into a single datetime object
-    #         # date_time = datetime.strptime(trackpoint[5] + " " + trackpoint[6], "%Y-%m-%d %H:%M:%S")
-    #         date_time = parse(trackpoint[5] + " " + trackpoint[6])
-    #         formatted_trackpoints.append((activity_id, latitude, longitude, altitude, date_days, date_time))
-
-    #     query = """
-    #         INSERT INTO TrackPoint (activity_id, lat, lon, altitude, date_days, date_time)
-    #         VALUES (%s, %s, %s, %s, %s, %s)
-    #     """
-    #     self.cursor.executemany(query, formatted_trackpoints)   
-        
     def prepare_trackpoints(self, activity_id, trackpoints):
         formatted_trackpoints = []
         for trackpoint in trackpoints:
@@ -129,11 +111,11 @@ class DbCreator:
                 print(f"Error inserting batch {i // batch_size}: {err}")
             print("Finished inserting ", i + len(batch) , "trackpoints.")
         
-    def filter_and_insert_activities(self, no_users=181):
+    def filter_and_insert_activities(self):
         self.cursor.execute("SELECT * FROM User")
         user_tuples = self.cursor.fetchall()
         all_formatted_trackpoints = []
-        for user_id, has_labels in user_tuples[:no_users]:
+        for user_id, has_labels in user_tuples:
             activity_files = os.listdir(self.base_path + "Data/" + user_id + "/Trajectory")
             if len(activity_files) == 0: raise FileNotFoundError("No activity files found for user", user_id)
             for plt_file in activity_files:
@@ -156,15 +138,6 @@ class DbCreator:
         self.connection.commit()
         print("Finished inserting all trackpoints")
                 
-    # def read_plt(self, file_path):
-    #     with open(file_path, 'r') as file:
-    #             lines = file.readlines()
-    #     if len(lines) > 2500 - 6: return None
-    #     data = []
-    #     for line in lines[6:]:
-    #         data.append(line.strip().split(','))
-    #     return data
-    
     def read_plt(self, file_path):
         data = []
         with open(file_path, 'r') as file:
@@ -193,18 +166,9 @@ def main():
     program = None
     try:
         program = DbCreator()
-        program.drop_table("TrackPoint")
-        program.drop_table("Activity")
-        program.drop_table("User")
-        # user_id = "010"
-        # print(program.read_labels(program.base_path + "Data/" + user_id + "/labels.txt"))
         program.create_tables()
         program.insert_userdata()
-        # program.empty_table("Activity")
         program.filter_and_insert_activities()
-        # program.drop_table("TrackPoint")
-        # program.drop_table("Activity")
-        # program.drop_table("User")    
     except Exception as e:
         print("ERROR: Failed to use database:", e)
     finally:
