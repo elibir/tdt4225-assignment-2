@@ -96,7 +96,7 @@ class DbCreator:
             formatted_trackpoints.append((activity_id, latitude, longitude, altitude, date_days, date_time))
         return formatted_trackpoints
         
-    def insert_all_trackpoints(self, all_formatted_trackpoints, batch_size=200000):
+    def insert_all_trackpoints(self, all_formatted_trackpoints, batch_size=400000):
         query = """
             INSERT INTO TrackPoint (activity_id, lat, lon, altitude, date_days, date_time)
             VALUES (%s, %s, %s, %s, %s, %s)
@@ -144,7 +144,7 @@ class DbCreator:
             for _ in range(6):  # Skip header lines
                 next(file)
             for line in file:
-                if len(data) >= 2500:
+                if len(data) > 2500:
                     return None  # Skip files with more than 2500 trackpoints
                 data.append(line.strip().split(','))
         return data

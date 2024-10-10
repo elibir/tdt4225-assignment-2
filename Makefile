@@ -1,7 +1,7 @@
 # Makefile for managing project tasks
 
 # List of phony targets
-.PHONY: create-env clean remove-env queries db pip_install down init_db setup help
+.PHONY: create-env clean remove-env db pip_install down init_db setup help
 
 VENV_NAME=myenv
 
@@ -32,11 +32,6 @@ remove-env: clean ## Remove the Python virtual environment
 	@echo "Removing virtual environment..."
 	rmdir /s /q $(VENV_NAME)
 
-# Run main.py
-queries: ## Run the queries
-	@echo "Running main.py..."
-	$(PYTHON) main.py
-
 # Start the database using Docker Compose
 db: ## Start the database using Docker Compose
 	@echo "Starting the database..."
@@ -48,7 +43,7 @@ pip_install: create-env ## Install project requirements
 	$(PIP) install -r requirements.txt
 
 # Tear down the Docker containers
-down: # remove_env ## Tear down Docker containers
+down: ## Tear down Docker containers
 	@echo "Tearing down the Docker containers..."
 	docker-compose down
 
@@ -63,7 +58,6 @@ setup: db pip_install ## Start all services
 	@echo "Pausing for the database to initialize..."
 	@cmd /c "timeout /t 10 /nobreak >nul"
 	$(MAKE) init_db
-	@echo "Starting all services..."
 
 # List all available make commands
 help: ## Show help
